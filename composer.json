@@ -1,0 +1,29 @@
+{
+	"name" : "merlinthemagic/mtm-queues",
+	"type" : "library",
+	"description" : "Message Queueing tools for PHP 7",
+	"version" : "0.0.1",
+	"keywords" : [
+		"async",
+		"queue",
+		"messages"
+	],
+	"homepage" : "https://github.com/merlinthemagic/MTM-Queues",
+	"license" : "LGPL-3.0",
+	"authors" : [{
+			"name" : "Martin Peter Madsen",
+			"email" : "dev@martinpetermadsen.com",
+			"role" : "Developer"
+		}
+	],
+	"require" : {
+		"php" : ">=7.3.0",
+		"merlinthemagic/mtm-utilities" : ">=0.0.1"
+	},
+	"autoload" : {
+		"files" : [
+			"./Enable.php"
+		]
+	},
+	"minimum-stability" : "dev"
+}
