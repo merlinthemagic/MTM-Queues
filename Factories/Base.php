@@ -1,6 +1,6 @@
 <?php
 //© 2019 Martin Peter Madsen
-namespace MTM\NewDefault\Factories;
+namespace MTM\Queues\Factories;
 
 class Base
 {
