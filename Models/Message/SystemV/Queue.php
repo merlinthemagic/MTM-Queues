@@ -23,26 +23,17 @@ class Queue extends Base
 	{
 		$this->terminate();
 	}
-	public function setData($data, $type=1, $block=false, $throw=true)
+	public function setData($data, $type=null, $block=false, $throw=true)
 	{
 		//max msg size: ipcs -ql
-		$rObj			= new \stdClass();
-		$rObj->exeTime	= \MTM\Utilities\Factories::getTime()->getMicroEpoch();
-		$rObj->runTime	= null;
-		$rObj->status	= null;
-
-		$isValid		= msg_send($this->getRes(), $type, $data, true, $block, $error);
-		$rObj->runTime	= \MTM\Utilities\Factories::getTime()->getMicroEpoch() - $rObj->exeTime;
-		if ($isValid === true) {
-			$rObj->status	= "success";
-		} else {
-			if ($throw === true) {
-				throw new \Exception("Failed to send set message in queue", $error);
-			} else {
-				$rObj->status	= "error: " . $error;
-			}
+		if ($type === null) {
+			$type	= 1;
 		}
-		return $rObj;
+		$isValid		= msg_send($this->getRes(), $type, $data, true, $block, $error);
+		if ($isValid === false) {
+			throw new \Exception("Failed to send set message in queue", $error);
+		}
+		return $this;
 	}
 	public function getData($type=null, $maxSize=null, $timeout=10000, $throw=true)
 	{
@@ -52,51 +43,48 @@ class Queue extends Base
 		if ($maxSize === null) {
 			$maxSize	= 16384;
 		}
-
-		$rObj			= new \stdClass();
-		$rObj->success	= null;
-		$rObj->type		= null;
-		$rObj->data		= null;
-		
-		if ($timeout >= 0) {
-			//non blocking
-			$flags		= MSG_IPC_NOWAIT;
+		if ($timeout < 0) {
+			
+			$flags		= 0;//negative timeout means blocking
+			$isValid	= msg_receive($this->getRes(), $type, $msgtype, $maxSize, $data, true, $flags, $errorNbr);
+			if ($isValid === true) {
+				return (object) array("type" => $msgtype, "msg" => $data);
+			} else {
+				throw new \Exception("Failed to get message from queue", $errorNbr);
+			}
+			
+		} else {
+			
+			$flags		= MSG_IPC_NOWAIT; //0+ means non blocking
 			$tTime		= \MTM\Utilities\Factories::getTime()->getMicroEpoch() + ($timeout / 1000);
 			while(true) {
-				$isValid	= msg_receive($this->getRes(), $type, $msgtype, $maxSize, $data, true, $flags, $error);
+				$isValid	= msg_receive($this->getRes(), $type, $msgtype, $maxSize, $data, true, $flags, $errorNbr);
 				if ($isValid === true) {
-					break;
+					return (object) array("type" => $msgtype, "msg" => $data);
+				} elseif ($errorNbr != MSG_ENOMSG) {
+					throw new \Exception("Error receiving message", $error);//only no message errors are benign
 				} elseif (\MTM\Utilities\Factories::getTime()->getMicroEpoch() > $tTime) {
-					break;
+					if ($throw === true) {
+						throw new \Exception("Timeout getting message from queue", $errorNbr);
+					} else {
+						return (object) array("type" => null, "msg" => null);
+					}
 				} else {
 					usleep(10000);
 				}
 			}
-			
-		} else {
-			//negative timeout means blocking
-			$flags		= 0;
-			$isValid	= msg_receive($this->getRes(), $type, $msgtype, $maxSize, $data, true, $flags, $error);
 		}
-		
-		$rObj->runTime	= \MTM\Utilities\Factories::getTime()->getMicroEpoch() - $rObj->exeTime;
-		if ($isValid === true) {
-			$rObj->success	= true;
-			$rObj->type		= $msgtype;
-			$rObj->data		= $data;
-			return $rObj;
-		} elseif ($timeout >= 0 && $error == MSG_ENOMSG) {
-			//no messages in queue
-			$rObj->status	= "Queue is empty";
-		} else {
-			$rObj->status	= "Error code: " . $error;
+	}
+	public function clear()
+	{
+		//clear all messages from queue
+		while(true) {
+			$msgObj	= $this->getData(null, null, 0, false);
+			if ($msgObj->type === null) {
+				break;
+			}
 		}
-		
-		if ($throw === true) {
-			throw new \Exception($rObj->status, $error);
-		} else {
-			return $rObj;
-		}
+		return $this;
 	}
 	public function initialize()
 	{

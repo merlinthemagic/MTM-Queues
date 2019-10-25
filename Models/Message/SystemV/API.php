@@ -18,7 +18,7 @@ class API
 		$queueObj	= $this->getQueueByName($name, false);
 		if ($queueObj === null) {
 			
-			$segId		= \MTM\Utilities\Factories::getStrings()->getHashing()->getAsInteger($name, 4294967295);
+			$segId			= $this->getSegmentIdFromName($name);
 			$queueObj		= new \MTM\Queues\Models\Message\SystemV\Queue($segId);
 			$queueObj->setParent($this)->setName($name)->setKeepAlive($this->getDefaultKeepAlive());
 
@@ -44,6 +44,11 @@ class API
 			throw new \Exception("Queue exists with permissions: " . $queueObj->getPermission() . ", requested permissions: " . $perm);
 		}
 		return $queueObj;
+	}
+	public function getQueueExistByName($name)
+	{
+		$segId		= $this->getSegmentIdFromName($name);
+		return msg_queue_exists($segId);
 	}
 	public function getQueueByName($name, $throw=false)
 	{
@@ -74,5 +79,11 @@ class API
 	public function getDefaultKeepAlive()
 	{
 		return $this->_keepAlive;
+	}
+	protected function getSegmentIdFromName($name)
+	{
+		//there seems to be a 32bit limit on the address space, if we do not limit we will not be able to find the share
+		//attached count, because the max id can be 64bit/2
+		return \MTM\Utilities\Factories::getStrings()->getHashing()->getAsInteger($name, 4294967295);
 	}
 }
