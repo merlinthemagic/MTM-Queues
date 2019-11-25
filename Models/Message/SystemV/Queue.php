@@ -8,10 +8,11 @@ class Queue extends Base
 	protected $_guid=null;
 	protected $_name=null;
 	protected $_isInit=false;
-	protected $_initTime=null;
 	protected $_isTerm=false;
+	protected $_initTime=null;
 	protected $_keepAlive=true;
 	protected $_perm="0666";
+	protected $_maxSize=null;
 	protected $_queueRes=null;
 	
 	public function __construct($id)
@@ -23,15 +24,35 @@ class Queue extends Base
 	{
 		$this->terminate();
 	}
+	public function isInit()
+	{
+		return $this->_isInit;
+	}
+	public function isTerm()
+	{
+		return $this->_isTerm;
+	}
 	public function setData($data, $type=null, $block=false, $throw=true)
 	{
 		//max msg size: ipcs -ql
 		if ($type === null) {
 			$type	= 1;
 		}
-		$isValid		= msg_send($this->getRes(), $type, $data, true, $block, $error);
+		
+		$isValid	= msg_send($this->getRes(), $type, $data, true, $block, $errNbr);
 		if ($isValid === false) {
-			throw new \Exception("Failed to send set message in queue", $error);
+			
+			echo "\n <code><pre> \nClass:  ".get_class($this)." \nMethod:  ".__FUNCTION__. "  \n";
+			print_r($this->getMetaData());
+			echo "\n wrgrwgr \n";
+			print_r(strlen(serialize($data)));
+			echo "\n 3333 \n";
+			print_r($type);
+			echo "\n 3333 \n";
+			print_r($data);
+			echo "\n ".time()."</pre></code> \n ";
+			die("end");
+			throw new \Exception("Failed to set message in queue", $errNbr);
 		}
 		return $this;
 	}
@@ -41,7 +62,8 @@ class Queue extends Base
 			$type	= 0;
 		}
 		if ($maxSize === null) {
-			$maxSize	= 16384;
+			//cat /proc/sys/kernel/msgmnb
+			$maxSize	= $this->_maxSize;
 		}
 		if ($timeout < 0) {
 			
@@ -62,7 +84,7 @@ class Queue extends Base
 				if ($isValid === true) {
 					return (object) array("type" => $msgtype, "msg" => $data);
 				} elseif ($errorNbr != MSG_ENOMSG) {
-					throw new \Exception("Error receiving message", $error);//only no message errors are benign
+					throw new \Exception("Error receiving message", $errorNbr);//only no message errors are benign
 				} elseif (\MTM\Utilities\Factories::getTime()->getMicroEpoch() > $tTime) {
 					if ($throw === true) {
 						throw new \Exception("Timeout getting message from queue", $errorNbr);
@@ -97,9 +119,10 @@ class Queue extends Base
 				} else {
 					throw new \Exception("Failed to get message queue");
 				}
-
 				$this->_initTime	= \MTM\Utilities\Factories::getTime()->getMicroEpoch();
 				$this->_isInit		= true;
+				//max receive size
+				$this->_maxSize		= $this->getMetaData()->size;
 				
 			} else {
 				throw new \Exception("Cannot initialize without an ID");
@@ -109,15 +132,16 @@ class Queue extends Base
 	}
 	public function terminate()
 	{
-		if ($this->_isTerm === false) {
+		if ($this->isTerm() === false) {
 			$this->_isTerm	= true;
 
-			if ($this->_isInit === true) {
-				if ($this->getKeepAlive() === false) {
-					msg_remove_queue($this->getRes());
+			if ($this->isInit() === true && $this->getKeepAlive() === false) {
+				$isValid	= @msg_remove_queue($this->getRes());
+				if ($isValid === false) {
+					throw new \Exception("Failed to remove queue: " . $this->getName());
 				}
-				$this->_queueRes	= null;
 			}
+			$this->_queueRes	= null;
 			$this->getParent()->removeQueue($this);
 		}
 	}
