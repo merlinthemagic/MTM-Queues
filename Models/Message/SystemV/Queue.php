@@ -10,7 +10,6 @@ class Queue extends Base
 	protected $_isInit=false;
 	protected $_isTerm=false;
 	protected $_initTime=null;
-	protected $_keepAlive=true;
 	protected $_perm="0666";
 	protected $_maxSize=null;
 	protected $_queueRes=null;
@@ -41,18 +40,17 @@ class Queue extends Base
 		
 		$isValid	= msg_send($this->getRes(), $type, $data, true, $block, $errNbr);
 		if ($isValid === false) {
-			
-			echo "\n <code><pre> \nClass:  ".get_class($this)." \nMethod:  ".__FUNCTION__. "  \n";
-			print_r($this->getMetaData());
-			echo "\n wrgrwgr \n";
-			print_r(strlen(serialize($data)));
-			echo "\n 3333 \n";
-			print_r($type);
-			echo "\n 3333 \n";
-			print_r($data);
-			echo "\n ".time()."</pre></code> \n ";
-			die("end");
-			throw new \Exception("Failed to set message in queue", $errNbr);
+
+			$qMax	= $this->getParent()->getMaxQueueSize();
+			$mMax	= $this->getParent()->getMaxMessageSize();
+			$size		= strlen(serialize($data));
+			if ($size > $qMax) {
+				throw new \Exception("Failed to set message in queue, max queue size: " . $qMax . " exceeded: " . $size, $errNbr);
+			} elseif ($size > $mMax) {
+				throw new \Exception("Failed to set message in queue, max message size: " . $mMax . " exceeded: " . $size, $errNbr);
+			} else {
+				throw new \Exception("Failed to set message in queue", $errNbr);
+			}
 		}
 		return $this;
 	}
@@ -133,17 +131,16 @@ class Queue extends Base
 	public function terminate()
 	{
 		if ($this->isTerm() === false) {
-			$this->_isTerm	= true;
-
-			if ($this->isInit() === true && $this->getKeepAlive() === false) {
-				$isValid	= @msg_remove_queue($this->getRes());
-				if ($isValid === false) {
-					throw new \Exception("Failed to remove queue: " . $this->getName());
-				}
-			}
+			$this->_isTerm		= true;
 			$this->_queueRes	= null;
 			$this->getParent()->removeQueue($this);
 		}
+		return $this;
+	}
+	public function delete()
+	{
+		$this->getParent()->deleteQueue($this);
+		return $this;
 	}
 	public function getGuid()
 	{
@@ -189,17 +186,6 @@ class Queue extends Base
 		} else {
 			throw new \Exception("Queue is not yet initialized");
 		}
-	}
-	public function setKeepAlive($bool)
-	{
-		//remove the resource on terminate if we are the last
-		//connected
-		$this->_keepAlive	= $bool;
-		return $this;
-	}
-	public function getKeepAlive()
-	{
-		return $this->_keepAlive;
 	}
 	protected function getRes()
 	{

@@ -5,7 +5,6 @@ namespace MTM\Queues\Models\Message\SystemV;
 class API
 {
 	protected $_queueObjs=array();
-	protected $_keepAlive=true;
 	
 	public function getQueue($name=null, $perm=null)
 	{
@@ -20,7 +19,7 @@ class API
 			
 			$segId			= $this->getSegmentIdFromName($name);
 			$queueObj		= new \MTM\Queues\Models\Message\SystemV\Queue($segId);
-			$queueObj->setParent($this)->setName($name)->setKeepAlive($this->getDefaultKeepAlive());
+			$queueObj->setParent($this)->setName($name);
 
 			if ($perm !== null) {
 				$perm	= str_repeat("0", 4 - strlen($perm)) . $perm;
@@ -44,6 +43,35 @@ class API
 			throw new \Exception("Queue exists with permissions: " . $queueObj->getPermission() . ", requested permissions: " . $perm);
 		}
 		return $queueObj;
+	}
+	public function getMaxQueueSize()
+	{
+		//increse the queue overall size:
+		//echo 131072 > /proc/sys/kernel/msgmnb
+		//there is also a bunch of settings in "/proc/sys/fs/mqueue" but they do not seem to have any effect
+		$shellObj	= \MTM\Utilities\Factories::getSoftware()->getPhpTool()->getShell();
+		$strCmd		= "cat /proc/sys/kernel/msgmnb";
+		$maxSize	= trim($shellObj->write($strCmd)->read()->data);
+		if (is_numeric($maxSize) === true) {
+			return intval($maxSize);
+		} else {
+			throw new \Exception("Failed to get max queue size");
+		}
+	}
+	public function getMaxMessageSize()
+	{
+		//default max message size on Linux is 8192bytes
+		//increse the queue max message size:
+		//echo 131072 > /proc/sys/kernel/msgmax
+		//there is also a bunch of settings in "/proc/sys/fs/mqueue" but they do not seem to have any effect
+		$shellObj	= \MTM\Utilities\Factories::getSoftware()->getPhpTool()->getShell();
+		$strCmd		= "cat /proc/sys/kernel/msgmax";
+		$maxSize	= trim($shellObj->write($strCmd)->read()->data);
+		if (is_numeric($maxSize) === true) {
+			return intval($maxSize);
+		} else {
+			throw new \Exception("Failed to get max message size");
+		}
 	}
 	public function getQueueExistByName($name)
 	{
@@ -70,15 +98,19 @@ class API
 		}
 		return $this;
 	}
-	public function setDefaultKeepAlive($bool)
+	public function deleteQueue($queueObj)
 	{
-		//should shares delete once terminated if there are no other connections
-		$this->_keepAlive	= $bool;
+		$segId	= $this->getSegmentIdFromName($queueObj->getName());
+		$exist	= msg_queue_exists($segId);
+		if ($exist === true) {
+			$qRes		= msg_get_queue($segId);
+			$isValid	= msg_remove_queue($qRes);
+			if ($isValid === false) {
+				throw new \Exception("Failed to delete queue: " . $queueObj->getName());
+			}
+		}
+		$this->removeQueue($queueObj);
 		return $this;
-	}
-	public function getDefaultKeepAlive()
-	{
-		return $this->_keepAlive;
 	}
 	protected function getSegmentIdFromName($name)
 	{
