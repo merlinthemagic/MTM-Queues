@@ -4,6 +4,7 @@ namespace MTM\Queues\Models\Message\SystemV;
 
 class API
 {
+	protected $_shellObj=null;
 	protected $_queueObjs=array();
 	
 	public function getQueue($name=null, $perm=null)
@@ -44,14 +45,17 @@ class API
 		}
 		return $queueObj;
 	}
+	public function getQueues()
+	{
+		return array_values($this->_queueObjs);
+	}
 	public function getMaxQueueSize()
 	{
 		//increse the queue overall size:
 		//echo 131072 > /proc/sys/kernel/msgmnb
 		//there is also a bunch of settings in "/proc/sys/fs/mqueue" but they do not seem to have any effect
-		$shellObj	= \MTM\Utilities\Factories::getSoftware()->getPhpTool()->getShell();
 		$strCmd		= "cat /proc/sys/kernel/msgmnb";
-		$maxSize	= trim($shellObj->write($strCmd)->read()->data);
+		$maxSize	= trim($this->getShell()->write($strCmd)->read()->data);
 		if (is_numeric($maxSize) === true) {
 			return intval($maxSize);
 		} else {
@@ -64,9 +68,8 @@ class API
 		//increse the queue max message size:
 		//echo 131072 > /proc/sys/kernel/msgmax
 		//there is also a bunch of settings in "/proc/sys/fs/mqueue" but they do not seem to have any effect
-		$shellObj	= \MTM\Utilities\Factories::getSoftware()->getPhpTool()->getShell();
 		$strCmd		= "cat /proc/sys/kernel/msgmax";
-		$maxSize	= trim($shellObj->write($strCmd)->read()->data);
+		$maxSize	= trim($this->getShell()->write($strCmd)->read()->data);
 		if (is_numeric($maxSize) === true) {
 			return intval($maxSize);
 		} else {
@@ -117,5 +120,13 @@ class API
 		//there seems to be a 32bit limit on the address space, if we do not limit we will not be able to find the share
 		//attached count, because the max id can be 64bit/2
 		return \MTM\Utilities\Factories::getStrings()->getHashing()->getAsInteger($name, 4294967295);
+	}
+	protected function getShell()
+	{
+		//cache in class to ensure its torn down after the API
+		if ($this->_shellObj === null) {
+			$this->_shellObj	= \MTM\Utilities\Factories::getSoftware()->getPhpTool()->getShell();
+		}
+		return $this->_shellObj;
 	}
 }
