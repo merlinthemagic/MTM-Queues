@@ -2,7 +2,7 @@
 	"name" : "merlinthemagic/mtm-queues",
 	"type" : "library",
 	"description" : "Message Queueing tools for PHP 7",
-	"version" : "0.0.1",
+	"version" : "0.0.2",
 	"keywords" : [
 		"async",
 		"queue",

@@ -43,10 +43,18 @@ class Queue extends Base
 
 			$qMax	= $this->getParent()->getMaxQueueSize();
 			$mMax	= $this->getParent()->getMaxMessageSize();
-			$size		= strlen(serialize($data));
+			$size	= strlen(serialize($data));
 			if ($size > $qMax) {
+				//increase: echo 131072 > /proc/sys/kernel/msgmnb
+				//or: sysctl -w kernel.msgmnb=131072
+				//or to make permanent:
+				//echo "kernel.msgmnb = 131072" >> /etc/sysctl.conf
+				
 				throw new \Exception("Failed to set message in queue, max queue size: " . $qMax . " exceeded: " . $size, $errNbr);
 			} elseif ($size > $mMax) {
+				//increase: echo 131072 > /proc/sys/kernel/msgmax
+				//or: sysctl -w kernel.msgmax=131072
+				//echo "kernel.msgmax = 131072" >> /etc/sysctl.conf
 				throw new \Exception("Failed to set message in queue, max message size: " . $mMax . " exceeded: " . $size, $errNbr);
 			} else {
 				throw new \Exception("Failed to set message in queue", $errNbr);
@@ -132,7 +140,6 @@ class Queue extends Base
 	{
 		if ($this->isTerm() === false) {
 			$this->_isTerm		= true;
-			$this->_queueRes	= null;
 			$this->getParent()->removeQueue($this);
 		}
 		return $this;
