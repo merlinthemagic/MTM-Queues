@@ -121,7 +121,13 @@ class Queue extends Base
 				
 				$queueRes	= msg_get_queue($this->getId(), intval($this->getPermission(), 8));
 				if (is_resource($queueRes) === true) {
-					$this->_queueRes		= $queueRes;
+					$stats	= msg_stat_queue($queueRes);
+					if ($stats !== false) {
+						$this->_queueRes		= $queueRes;
+					} else {
+						throw new \Exception("Failed to get message queue, does your user have read permissions to the queue?");
+					}
+
 				} else {
 					throw new \Exception("Failed to get message queue");
 				}
@@ -179,16 +185,19 @@ class Queue extends Base
 	{
 		if ($this->_isInit === true) {
 			$stats			= msg_stat_queue($this->getRes());
-			$mode			= substr(sprintf("%o", $stats["msg_perm.mode"]), -4);
-			
-			$rObj			= new \stdClass();
-			$rObj->perm		= str_repeat("0", 4 - strlen($mode)) . $mode;
-			$rObj->uId		= $stats["msg_perm.uid"];
-			$rObj->gId		= $stats["msg_perm.gid"];
-			$rObj->size		= $stats["msg_qbytes"];
-			$rObj->msgCount	= $stats["msg_qnum"];
-
-			return $rObj;
+			if ($stats !== false) {
+				$mode			= substr(sprintf("%o", $stats["msg_perm.mode"]), -4);
+				$rObj			= new \stdClass();
+				$rObj->perm		= str_repeat("0", 4 - strlen($mode)) . $mode;
+				$rObj->uId		= $stats["msg_perm.uid"];
+				$rObj->gId		= $stats["msg_perm.gid"];
+				$rObj->size		= $stats["msg_qbytes"];
+				$rObj->msgCount	= $stats["msg_qnum"];
+				return $rObj;
+			} else {
+				//if the permissions are tight 0600 and the queue was created by another user we fail to read the permissions
+				throw new \Exception("Failed to get queue meta data stats, does your user have read access to the queue");
+			}
 
 		} else {
 			throw new \Exception("Queue is not yet initialized");
