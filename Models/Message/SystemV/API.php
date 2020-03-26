@@ -35,13 +35,13 @@ class API
 					$queueObj->setPermission($meta->perm); //user did not specify, so we correct
 				} elseif ($meta->perm != $perm) {
 					$queueObj->terminate();
-					throw new \Exception("Queue exists with permissions: " . $meta->perm . ", requested permissions: " . $perm);
+					throw new \Exception("A queue exists with permission: " . $meta->perm . ", requested permissions: " . $perm);
 				}
 			}
 			$hash						= hash("sha256", $name);
 			$this->_queueObjs[$hash]	= $queueObj;
 		} elseif ($perm !== null && $queueObj->getPermission() != $perm) {
-			throw new \Exception("Queue exists with permissions: " . $queueObj->getPermission() . ", requested permissions: " . $perm);
+			throw new \Exception("Queue already exists with permissions: " . $queueObj->getPermission() . ", requested permissions: " . $perm);
 		}
 		return $queueObj;
 	}

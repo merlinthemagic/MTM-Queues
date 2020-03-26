@@ -187,7 +187,7 @@ class Queue extends Base
 			$rObj->gId		= $stats["msg_perm.gid"];
 			$rObj->size		= $stats["msg_qbytes"];
 			$rObj->msgCount	= $stats["msg_qnum"];
-			
+
 			return $rObj;
 
 		} else {
