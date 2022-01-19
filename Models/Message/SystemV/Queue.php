@@ -12,6 +12,7 @@ class Queue extends Base
 	protected $_initTime=null;
 	protected $_perm="0666";
 	protected $_maxSize=null;
+	protected $_readDelay=10000;
 	protected $_queueRes=null;
 	
 	public function __construct($id)
@@ -31,6 +32,14 @@ class Queue extends Base
 	{
 		return $this->_isTerm;
 	}
+	public function setReadDelay($ms)
+	{
+		if (is_int($ms) === false) {
+			throw new \Exception("Invalid input");
+		}
+		$this->_readDelay	= $ms;
+		return $this;
+	}
 	public function setData($data, $type=null, $block=false, $throw=true)
 	{
 		//max msg size: ipcs -ql
@@ -42,16 +51,19 @@ class Queue extends Base
 		if ($isValid === false) {
 
 			$qMax	= $this->getParent()->getMaxQueueSize();
-			$mMax	= $this->getParent()->getMaxMessageSize();
 			$size	= strlen(serialize($data));
 			if ($size > $qMax) {
+				//check: cat /proc/sys/kernel/msgmnb
 				//increase: echo 131072 > /proc/sys/kernel/msgmnb
 				//or: sysctl -w kernel.msgmnb=131072
 				//or to make permanent:
 				//echo "kernel.msgmnb = 131072" >> /etc/sysctl.conf
 				
 				throw new \Exception("Failed to set message in queue, max queue size: " . $qMax . " exceeded: " . $size, $errNbr);
-			} elseif ($size > $mMax) {
+			}
+			
+			$mMax	= $this->getParent()->getMaxMessageSize();
+			if ($size > $mMax) {
 				//increase: echo 131072 > /proc/sys/kernel/msgmax
 				//or: sysctl -w kernel.msgmax=131072
 				//echo "kernel.msgmax = 131072" >> /etc/sysctl.conf
@@ -98,7 +110,7 @@ class Queue extends Base
 						return (object) array("type" => null, "msg" => null);
 					}
 				} else {
-					usleep(10000);
+					usleep($this->_readDelay);
 				}
 			}
 		}
