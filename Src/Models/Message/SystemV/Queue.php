@@ -49,7 +49,7 @@ class Queue extends Base
 		
 		$isValid	= msg_send($this->getRes(), $type, $data, true, $block, $errNbr);
 		if ($isValid === false) {
-
+			
 			$qMax	= $this->getParent()->getMaxQueueSize();
 			$size	= strlen(serialize($data));
 			if ($size > $qMax) {
@@ -81,6 +81,7 @@ class Queue extends Base
 		}
 		if ($maxSize === null) {
 			//cat /proc/sys/kernel/msgmnb
+			//every call to msg_receive allocates this mem + 4 bytes up front
 			$maxSize	= $this->_maxSize;
 		}
 		if ($timeout < 0) {
@@ -139,14 +140,14 @@ class Queue extends Base
 					} else {
 						throw new \Exception("Failed to get message queue, does your user have read permissions to the queue?");
 					}
-
+					
 				} else {
 					throw new \Exception("Failed to get message queue");
 				}
 				$this->_initTime	= \MTM\Utilities\Factories::getTime()->getMicroEpoch();
 				$this->_isInit		= true;
-				//max receive size
-				$this->_maxSize		= $this->getMetaData()->size;
+				//max message size on the system
+				$this->_maxSize		= $this->getParent()->getMaxMessageSize();
 				
 			} else {
 				throw new \Exception("Cannot initialize without an ID");
@@ -210,7 +211,7 @@ class Queue extends Base
 				//if the permissions are tight 0600 and the queue was created by another user we fail to read the permissions
 				throw new \Exception("Failed to get queue meta data stats, does your user have read access to the queue");
 			}
-
+			
 		} else {
 			throw new \Exception("Queue is not yet initialized");
 		}
