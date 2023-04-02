@@ -1,5 +1,5 @@
 <?php
-//© 2019 Martin Peter Madsen
+//ï¿½ 2019 Martin Peter Madsen
 namespace MTM\Queues\Models\Message\SystemV;
 
 class Queue extends Base
@@ -133,7 +133,8 @@ class Queue extends Base
 			if ($this->getId() !== null) {
 				
 				$queueRes	= msg_get_queue($this->getId(), intval($this->getPermission(), 8));
-				if (is_resource($queueRes) === true) {
+				//object in php8, resource in 7
+				if (is_object($queueRes) === true || is_resource($queueRes) === true) {
 					$stats	= msg_stat_queue($queueRes);
 					if ($stats !== false) {
 						$this->_queueRes		= $queueRes;
