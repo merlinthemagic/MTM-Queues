@@ -47,7 +47,7 @@ class Queue extends Base
 			$type	= 1;
 		}
 		
-		$isValid	= msg_send($this->getRes(), $type, $data, true, $block, $errNbr);
+		$isValid	= @msg_send($this->getRes(), $type, $data, true, $block, $errNbr);
 		if ($isValid === false) {
 			
 			$qMax	= $this->getParent()->getMaxQueueSize();
