@@ -59,7 +59,7 @@ class Queue extends Base
 				//or to make permanent:
 				//echo "kernel.msgmnb = 131072" >> /etc/sysctl.conf
 				
-				throw new \Exception("Failed to set message in queue, max queue size: " . $qMax . " exceeded: " . $size, $errNbr);
+				throw new \Exception("Failed to set message in queue, max queue size: " . $qMax . " exceeded: " . $size, 877361);
 			}
 			
 			$mMax	= $this->getParent()->getMaxMessageSize();
@@ -67,9 +67,9 @@ class Queue extends Base
 				//increase: echo 131072 > /proc/sys/kernel/msgmax
 				//or: sysctl -w kernel.msgmax=131072
 				//echo "kernel.msgmax = 131072" >> /etc/sysctl.conf
-				throw new \Exception("Failed to set message in queue, max message size: " . $mMax . " exceeded: " . $size, $errNbr);
+				throw new \Exception("Failed to set message in queue, max message size: " . $mMax . " exceeded: " . $size, 877362);
 			} else {
-				throw new \Exception("Failed to set message in queue", $errNbr);
+				throw new \Exception("Failed to set message in queue", 877363);
 			}
 		}
 		return $this;
